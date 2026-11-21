@@ -194,6 +194,29 @@ To regenerate them, put the source clip in `input_videos/` and run step 2 below.
 
 ## Run the analysis pipeline
 
+**As a library (for a worker or backend):**
+
+```python
+from pipeline.models import ModelBundle
+from pipeline.run import run_analysis
+
+models = ModelBundle()                                  # load once per worker
+index = run_analysis("match.mp4", "jobs/42", on_progress=print, cancel=stop_event, models=models)
+```
+
+`run_analysis` does the following:
+- validates the input (≤ 10 minutes, MP4/MOV, 16:9);
+- normalises it to H.264 at 1280×720 in the 30-fps class;
+- finds the camera shots that show the court;
+- runs detection with checkpoints, then post-processing and an annotated MP4.
+
+It writes only inside its work directory, reports progress, can be cancelled, and resumes
+when re-run. See [docs/public/PIPELINE.md](docs/public/PIPELINE.md) for the stages, input
+rules and outputs, and [`scripts/benchmark_pipeline.py`](scripts/benchmark_pipeline.py) to
+measure it.
+
+**As scripts (one manually chosen segment, as before):**
+
 ```bash
 # 1. Per-frame detection export. Streams one frame at a time (about 1.3 GB RAM),
 #    checkpoints every 25 frames and resumes automatically.
@@ -225,11 +248,16 @@ viewer. It has not yet been run end to end on a GPU.
 
 ## Testing
 
-- **Python:** **426 unit and integration tests** (`pytest tests/`): 412 upstream, plus 14
-  for the ball clean-up, flight fit and movement analytics. The flight tests recover a
-  synthetic rally through a synthetic camera within the reported uncertainty, and check
-  that a contradicted flight is withheld. `pytest tests/ -m "not slow"` needs no model
-  weights.
+- **Python:** **449 unit and integration tests** (`pytest tests/`): 412 upstream, 14 for
+  the ball clean-up, flight fit and movement analytics, and 23 for the pipeline package.
+  - The flight tests recover a synthetic rally through a synthetic camera within the
+    reported uncertainty, and check that a contradicted flight is withheld.
+  - The pipeline tests reproduce the original scripts' output exactly, from goldens in
+    `tests/data/`.
+  - With a fake model bundle and a synthetic court video, the pipeline tests also cover
+    normalisation, cut detection, track stitching, cancel-and-resume and model reuse.
+
+  `pytest tests/ -m "not slow"` needs no model weights.
 - **Browser:** `node tests/web/web_test.mjs`, with `web/serve.py` running. It makes 28
   checks in headless Chrome using real mouse and keyboard input, including:
   - the court frame equals the frame on screen during playback;

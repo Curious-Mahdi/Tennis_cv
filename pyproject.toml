@@ -69,6 +69,7 @@ tennis-vision = "cli:main"
 # wheel never silently picks up datasets/, output/ or notes/.
 packages = [
     "analytics",
+    "pipeline",
     "constants",
     # Ships models/hit_bounce_classifier.json. See models/__init__.py for why only the
     # small weights are packaged.
