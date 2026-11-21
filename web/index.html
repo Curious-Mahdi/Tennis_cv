@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tennis Vision — Rally Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="wordmark" href="#top">Tennis Vision</a>
+    <nav aria-label="Sections">
+      <a href="#analysis">Analysis</a>
+      <a href="#movement">Movement</a>
+      <a href="#method">Method</a>
+      <a href="https://github.com/HarshTomar1234/Tennis-Vision" target="_blank" rel="noopener">Upstream&nbsp;↗</a>
+    </nav>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-text">
+      <p class="eyebrow">Broadcast rally analysis</p>
+      <h1>A rally, read from a <em>single</em> broadcast camera.</h1>
+      <p class="lede" id="heroLede">Players, ball and court are detected frame by frame and mapped onto a
+        top-down court. Where the system could not measure something, this page shows that instead of a guess.</p>
+      <div class="hero-links">
+        <a class="link-primary" href="#analysis">Open the analysis</a>
+        <a class="link-quiet" href="#method">How positions are measured</a>
+      </div>
+    </div>
+    <figure class="hero-figure">
+      <img id="heroStill" alt="Broadcast frame from the analysed clip: far player striking the ball at the far baseline">
+      <figcaption id="heroCaption"></figcaption>
+    </figure>
+  </section>
+
+  <section class="workspace" id="analysis" aria-label="Analysis workspace">
+    <div class="ws-head">
+      <h2>Analysis</h2>
+      <p class="ws-meta" id="wsMeta"></p>
+    </div>
+
+    <div class="ws-grid">
+      <div class="ws-video">
+        <div class="video-wrap">
+          <video id="video" playsinline muted preload="auto"></video>
+          <canvas id="overlay"></canvas>
+          <div class="loading" id="loading">Loading video…</div>
+        </div>
+        <div class="controls">
+          <button id="btnPrev" class="ctl" title="Previous frame (←)" aria-label="Previous frame">
+            <svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+          <button id="btnPlay" class="ctl play" title="Play / pause (Space)" aria-label="Play">
+            <svg viewBox="0 0 24 24" id="iconPlay"><path d="M7 4v16l13-8z"/></svg>
+            <svg viewBox="0 0 24 24" id="iconPause" hidden><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+          <button id="btnNext" class="ctl" title="Next frame (→)" aria-label="Next frame">
+            <svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+          <div class="readout"><span id="timeReadout">0.000 s</span><span id="frameReadout">frame 0</span></div>
+          <div class="ctl-spacer"></div>
+          <label class="opt"><input type="checkbox" id="overlayToggle" checked> Detections on video</label>
+          <select id="rate" aria-label="Playback speed">
+            <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option>
+          </select>
+        </div>
+        <div class="timeline">
+          <div class="tl-labels"><span>Ball</span><span>Court</span><span>P1</span><span>P2</span><span>Events</span></div>
+          <canvas id="timeline" tabindex="0" aria-label="Timeline: detection quality per frame. Click or drag to seek."></canvas>
+          <div class="tl-tip" id="tlTip" hidden></div>
+        </div>
+        <div class="tl-key">
+          <span><i class="k ball"></i>ball detected / bounce measured</span>
+          <span><i class="k ball-i"></i>interpolated (≤2 frames) / court estimate</span>
+          <span><i class="k ball-u"></i>court estimate, uncertain</span>
+          <span><i class="k rej"></i>detection rejected</span>
+          <span><i class="k none"></i>no reliable position</span>
+        </div>
+      </div>
+
+      <div class="ws-court">
+        <svg id="court" viewBox="-4.4 -4.0 19.77 32.0" preserveAspectRatio="xMidYMid meet" role="img"
+             aria-label="Top-down court: player positions, trails, bounce and contact marks"></svg>
+        <div class="court-opts">
+          <label class="opt"><input type="checkbox" id="trailToggle" checked> Trails</label>
+          <label class="opt"><input type="checkbox" id="heatToggle"> Court occupancy</label>
+          <label class="opt"><input type="checkbox" id="smoothToggle" checked> Smoothed</label>
+        </div>
+        <div class="court-key">
+          <span><i class="ck p1"></i>Player 1</span>
+          <span><i class="ck p2"></i>Player 2</span>
+          <span><i class="ck bm"></i>Ball, measured bounce</span>
+          <span><i class="ck be"></i>Ball, estimated flight</span>
+          <span><i class="ck bu"></i>Estimate uncertainty</span>
+        </div>
+      </div>
+
+      <aside class="panel" id="panel" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="movement" id="movement">
+    <div class="sec-head">
+      <p class="eyebrow">Movement</p>
+      <h2 class="display">How far, and where, each player moved.</h2>
+      <p class="sec-lede" id="moveLede"></p>
+    </div>
+    <div class="move-grid">
+      <figure class="chart" id="chartDistance"></figure>
+      <figure class="chart" id="chartDepth"></figure>
+      <div class="move-table" id="moveTable"></div>
+    </div>
+  </section>
+
+  <section class="method" id="method">
+    <div class="sec-head">
+      <p class="eyebrow">Method</p>
+      <h2 class="display">What is measured, and what is not.</h2>
+    </div>
+    <div class="method-grid" id="methodGrid"></div>
+  </section>
+
+  <footer class="foot" id="foot"></footer>
+  <script src="app.js"></script>
+</body>
+</html>
